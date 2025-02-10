@@ -2,6 +2,7 @@ local SS13 = require("SS13")
 
 SS13.wait(1)
 local user = SS13.get_runner_client()
+local current_gravity_status
 
 function getGravGen()
     local SSmachines = dm.global_vars.SSmachines
@@ -29,7 +30,7 @@ function getVictim()
     return victim
 end
 
-function gravityToggle(state)
+function gravityToggle(state, announce, name)
     local SSmapping = dm.global_vars.SSmapping
     local station_levels = SSmapping:levels_by_trait("Station")
     local z_number = nil
@@ -38,7 +39,7 @@ function gravityToggle(state)
         z_number = station_levels[i]
         SSmapping.gravity_by_z_level[z_number] = state
     end
-
+    current_gravity_status = state
     
     local all_mobs = dm.global_vars.GLOB.mob_list
     local mob_to_update
@@ -50,6 +51,17 @@ function gravityToggle(state)
                 dm.global_procs.shake_camera(mob_to_update, 32, 0.5)
             end
         end
+    end
+
+    if(announce) then
+        local announcement_text = "Replacement generator " .. name
+        if(state) then
+            announcement_text = announcement_text .. " ONLINE, gravity reestablished."
+        else
+            announcement_text = announcement_text .. " OFFLINE, please ensure the generator is running again soon."
+        end
+
+        dm.global_procs.priority_announce(announcement_text, "Nanotrasen Gravity Anomalies Division")    
     end
 end
 
@@ -63,15 +75,19 @@ function turnVictimIntoGravgen()
     SS13.wait(1)
     deleteGravGen()
     SS13.wait(1)
-    gravityToggle(client.stat == 0)
-
-    SS13.register_signal(client, "mob_statchange", function(_, new_stat)
-        gravityToggle(new_stat == 0)
-    end)
+    current_gravity_status = (client.stat < 3)
+    gravityToggle(current_gravity_status, false)
 
     -- Announcement here
     local announcement_text = "Due to an unexpected anomaly, the gravity generator onboard seems to have disappeared. The replacement generator will be " .. client.name .. " until further notice."
     dm.global_procs.priority_announce(announcement_text, "Nanotrasen Gravity Anomalies Division")
+
+    SS13.register_signal(client, "mob_statchange", function(_, new_stat)
+        local new_value = new_stat < 3
+        if(current_gravity_status ~= (new_value)) then
+            gravityToggle(new_value, true, _.name)
+        end
+    end)
 end
 
 
