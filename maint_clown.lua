@@ -854,7 +854,7 @@ local function createPlayer()
 	SS13.register_signal(shoes, "item_post_unequip", punishTheClown)
 	SS13.register_signal(shoes, "parent_preqdeleted", punishTheClown)
 	sleep()
-	local betterEyes = SS13.new("/obj/item/organ/internal/eyes/night_vision/goliath")
+	local betterEyes = SS13.new("/obj/item/organ/eyes/night_vision/goliath")
 	betterEyes:Insert(player, false, 1)
 
 	local idCard = player.wear_id
