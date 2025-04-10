@@ -225,6 +225,7 @@ local function setupAntag(mind)
 				end
 			end
 		end
+		dm.global_procs.playsound(player, "sound/misc/scary_horn.ogg", 50, true)
 		active = true
 		if not ADMIN_MODE then
 			jumpIntoFloorboards:StartCooldown(1000)
@@ -342,6 +343,7 @@ local function setupAntag(mind)
 					end
 				end
 				active = true
+				dm.global_procs.playsound(player, "sound/misc/scary_horn.ogg", 50, true)
 				player:Stun(1)
 				player.anchored = true
 				dm.global_procs._add_trait(player, "block_transformations", "clown_antag")
