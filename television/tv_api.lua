@@ -6,7 +6,7 @@ local trustedAdmins = {
 	[admin] = true,
 }
 -- The auth token. You'll need to update this every time you run the script because the python script generates a new one each time it runs for security purposes.
-authToken = "auth token here"
+authToken = "na na na na"
 -- Whether users can submit requests or not.
 local acceptingRequests = true
 -- Whether it's one request per user until their video is played
@@ -534,7 +534,7 @@ if authToken ~= "" then
 			sleep()
 		end
 		local response = request:into_response()
-		channel.icon_file = SS13.await(SS13.global_procs._new("/icon", { file_name }))
+		channel.icon_file = SS13.await(SS13.global_proc, "_new", "/icon", { file_name })
 		channel.title = response.headers:get("video-title")
 		local references = SS13.state.vars.references
 		references:add(channel.icon_file)
@@ -643,9 +643,8 @@ local makeRequest = function(user, isAdmin)
 			-- Load in however long you want it to be, but this is just here so that you don't crash people's clients with 1 hr long videos
 			vidLength = 1200
 		end
-		SS13.global_procs.to_chat(user, ckey)
 		playerOpen[ckey] = true
-		local input = SS13.await(SS13.global_procs.tgui_input_text(user, "Input Youtube URL. Optionally include timestamp to start at a specific video location. Videos longer than "..vidLength.." seconds will be cut down in length.", "Request Youtube Video"))
+		local input = SS13.await(SS13.global_proc, "tgui_input_list", user, "Input Youtube URL. Optionally include timestamp to start at a specific video location. Videos longer than "..vidLength.." seconds will be cut down in length.", "Request Youtube Video")
 		playerOpen[ckey] = false
 		if not canMakeRequest(user, isAdmin) then
 			return
@@ -661,7 +660,7 @@ local makeRequest = function(user, isAdmin)
 		local startTime = tonumber(string.match(input, "t=(%d+)"))
 		if startTime then
 			playerOpen[ckey] = true
-			duration = SS13.await(SS13.global_procs.tgui_input_number(user, "Detected starting location, please specify video length to showcase in seconds", "Specify video length", vidLength, vidLength, 1))
+			duration = SS13.await(SS13.global_proc, "tgui_input_number", user, "Detected starting location, please specify video length to showcase in seconds", "Specify video length", vidLength, vidLength, 1)
 			playerOpen[ckey] = false
 		else
 			startTime = -1
@@ -807,7 +806,7 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 			openClientSettings(user)
 		elseif href_list:get("client_audio_mode") then
 			adminOpen[userCkey] = true
-			local input = SS13.await(SS13.global_procs.tgui_alert(user, "Set audio mode for how you will hear the TV", "Set audio mode", { AUDIO_DIRECTIONAL, AUDIO_MONO }))
+			local input = SS13.await(SS13.global_proc, "tgui_alert", user, "Set audio mode for how you will hear the TV", "Set audio mode", { AUDIO_DIRECTIONAL, AUDIO_MONO })
 			adminOpen[userCkey] = false
 			if input == nil then
 				return
@@ -819,7 +818,7 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 		elseif href_list:get("client_audio_volume") then
 			local playerSettings = getPlayerSettings(userCkey)
 			adminOpen[userCkey] = true
-			local newVolume = SS13.await(SS13.global_procs.tgui_input_number(user, "Please input new audio volume", "TV audio volume", playerSettings.volume, 100, 1))
+			local newVolume = SS13.await(SS13.global_proc, "tgui_input_number", user, "Please input new audio volume", "TV audio volume", playerSettings.volume, 100, 1)
 			adminOpen[userCkey] = false
 			if newVolume == nil then
 				return
@@ -843,7 +842,7 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 					startTextDuration = " | Start at "..startTime.."s | Duration: "..duration.."s"
 				end
 				adminOpen[userCkey] = true
-				local input = SS13.await(SS13.global_procs.tgui_alert(user, "Do you really want to play "..youtubeLink..startTextDuration, "Play Youtube link", { "Yes", "No" }))
+				local input = SS13.await(SS13.global_proc, "tgui_alert", user, "Do you really want to play "..youtubeLink..startTextDuration, "Play Youtube link", { "Yes", "No" })
 				adminOpen[userCkey] = false
 				if input ~= "Yes" then
 					return
@@ -869,7 +868,7 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 					return
 				end
 				adminOpen[userCkey] = true
-				local input = SS13.await(SS13.global_procs.tgui_input_text(user, "Input reason as to why you want to reject this request.", "Reject Reason"))
+				local input = SS13.await(SS13.global_proc, "tgui_input_text", user, "Input reason as to why you want to reject this request.", "Reject Reason")
 				adminOpen[userCkey] = false
 				local player = playerClient.mob
 				player.playsound_local(nil, "sound/effects/adminhelp.ogg", 75)
@@ -933,7 +932,7 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 				end
 			elseif href_list:get("admin_set_voteskip") then
 				adminOpen[userCkey] = true
-				local newVoteSkipAmount = SS13.await(SS13.global_procs.tgui_input_number(user, "Please input new vote skip boundary", "TV vote skip boundary", voteSkipRequired, 100, 1))
+				local newVoteSkipAmount = SS13.await(SS13.global_proc, "tgui_input_number", user, "Please input new vote skip boundary", "TV vote skip boundary", voteSkipRequired, 100, 1)
 				adminOpen[userCkey] = false
 				if newVoteSkipAmount == nil then
 					return
