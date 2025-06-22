@@ -7,7 +7,7 @@ local trustedAdmins = {
 }
 -- play this https://www.youtube.com/watch?v=dQw4w9WgXcQ ;)
 -- The auth token. You'll need to update this every time you run the script because the python script generates a new one each time it runs for security purposes.
-authToken = "na na na na"
+authToken = "pqteDnSkPJtOKIFRNUGGC" -- warning, run webserver.py on the same dir as your console is at
 -- Whether users can submit requests or not.
 local acceptingRequests = true
 -- Whether it's one request per user until their video is played
@@ -216,7 +216,7 @@ local animationEnd = 0
 local listeners = {}
 local function startTvLoop(players)
 	local playerClientImageMap = {}
-	while animationEnd > dm.world.timeofday and not not dm.is_valid_ref(tv) and tv.gc_destroyed == nil do
+	while animationEnd > dm.world.timeofday and dm.is_valid_ref(tv) and tv.gc_destroyed == nil do
 		if dm.world.timeofday < startTimeOfDay then
 			startTimeOfDay = dm.world.timeofday
 			animationEnd = 0
