@@ -1,10 +1,11 @@
 local SS13 = require("SS13")
 -- Change this to your ckey so that this works. Don't run it with my ckey please :)
-local admin = "artur_lang"
+local admin = "arturlang"
 -- Admins that can also take administrative action, though they can't freely upload videos that bypass the time limit.
 local trustedAdmins = {
-	[admin] = true,
+	arturlang = true,
 }
+-- play this https://www.youtube.com/watch?v=dQw4w9WgXcQ ;)
 -- The auth token. You'll need to update this every time you run the script because the python script generates a new one each time it runs for security purposes.
 authToken = "na na na na"
 -- Whether users can submit requests or not.
@@ -73,7 +74,6 @@ do
 	local request = SS13.new("/datum/http_request")
 	local file_name = "tmp/custom_map_icon.dmi"
 	local url = "http://raw.githubusercontent.com/tgstation/auxlua-cookbook/main/waltermeldron/assets/tv/inprogress.dmi"
-	dm.global_procs.to_chat(me, "<span class='linkify'>Fetching: <a href='"..url.."'>"..url.."</a></span>")
 	request:prepare("get", url, "", "", file_name)
 	request:begin_async()
 	while request:is_complete() == 0 do
@@ -180,10 +180,7 @@ end
 sign.appearance_flags = 520
 behindSign.mouse_opacity = 0
 behindSign.appearance_flags = 520
-
-
 globalPlayerSettings = globalPlayerSettings or nil
-
 
 local function getPlayerSettings(ckey)
 	globalPlayerSettings = globalPlayerSettings or {}
@@ -215,14 +212,14 @@ local animationEnd = 0
 local listeners = {}
 local function startTvLoop(players)
 	local playerClientImageMap = {}
-	while animationEnd > dm.world.timeofday and not tv:is_null() and tv.gc_destroyed == nil do
+	while animationEnd > dm.world.timeofday and not not dm.is_valid_ref(tv) and tv.gc_destroyed == nil do
 		if dm.world.timeofday < startTimeOfDay then
 			startTimeOfDay = dm.world.timeofday
 			animationEnd = 0
 			break
 		end
 		if playingChannel == nil then break end
-		if tv:is_null() or tv.gc_destroyed ~= nil then break end
+		if not dm.is_valid_ref(tv) or tv.gc_destroyed ~= nil then break end
 		local location = tv.loc
 		for _, playerData in players do
 			local playerClient = playerData.client
@@ -233,14 +230,14 @@ local function startTvLoop(players)
 			if playingChannel == nil then
 				break
 			end
-			if playerClient:is_null() then
+			if not dm.is_valid_ref(playerClient) then
 				continue
 			end
 			local player = playerClient.mob
 			if playerClientImageMap[playerClient] == nil then
 				playerClientImageMap[playerClient] = player
 			end
-			local playerPos = player.drop_location()
+			local playerPos = player:drop_location()
 			local dist = dm.global_procs._get_dist(playerPos, location)
 			local volume = playerConfig.volume * scaleConfig.volume
 			local playLocation = location
@@ -252,21 +249,21 @@ local function startTvLoop(players)
 				volume = 0
 			end
 			if playerClientImageMap[playerClient] ~= player then
-				dm.global_procs._list_add(playerClient.images, sign)
+				list.add(playerClient.images, sign)
 				playerClientImageMap[playerClient] = currentPlayerMob
 			end
-			player.playsound_local(playLocation, playingChannel.sound_file, volume, false, nil, 6, channel, true, playingChannel.sound_file, 17, 1, 1, true)
+			player:playsound_local(playLocation, playingChannel.sound_file, volume, false, nil, 6, channel, true, playingChannel.sound_file, 17, 1, 1, true)
 		end
 		sleep()
 	end
 	playingChannel = nil
 	for _, playerClient in dm.global_vars.GLOB.clients do
-		if not playerClient then
+		if not playerClient or not playerClient.images then
 			continue
 		end
 		local player = playerClient.mob
 		player:stop_sound_channel(channel)
-		dm.global_procs._list_remove(playerClient.images, sign)
+		list.remove(playerClient.images, sign)
 	end
 	animationEnd = 0
 	sleep()
@@ -280,28 +277,28 @@ local function startTvLoop(players)
 			blockPlayerRequest[channels[1].submitter] = nil
 			sign.icon = currentChannel.icon_file
 			currentChannel.sound_file.status = 0
-			local tvZLoc = tv.drop_location().z
+			local tvZLoc = tv:drop_location().z
 			for _, player in dm.global_vars.GLOB.player_list do
-				if over_exec_usage(0.7) then
-					sleep()
-				end
+				-- if (_exec.time / _exec.limit) > 0.7 then
+				-- 	sleep()
+				-- end
 				local dist = dm.global_procs._get_dist(player, tv)
 				if (dist > 12 and not infiniteRange) then
 					continue
 				end
-				local playerLocation = player.drop_location()
+				local playerLocation = player:drop_location()
 				local playerClient = player.client
-				if player:is_null() or not playerClient or not playerLocation or playerLocation:is_null() then
+				if not dm.is_valid_ref(player) or not playerClient or not playerLocation or not dm.is_valid_ref(playerLocation) then
 					continue
 				end
 				local playerSettings = getPlayerSettings(player.ckey)
 				if playerSettings.disableTv then
 					continue
 				end
-				if (player.drop_location().z == tvZLoc or infiniteRange) then
-					player.playsound_local(nil, currentChannel.sound_file, 0, false, nil, 6, channel, true, currentChannel.sound_file, 17, 1, 1, true)
+				if (player:drop_location().z == tvZLoc or infiniteRange) then
+					player:playsound_local(nil, currentChannel.sound_file, 0, false, nil, 6, channel, true, currentChannel.sound_file, 17, 1, 1, true)
 					local client = player.client
-					dm.global_procs._list_add(client.images, sign)
+					list.add(client.images, sign)
 				end
 			end
 			SS13.set_timeout(3 + (scaleConfig.extraWaitTime or 0), function()
@@ -335,22 +332,22 @@ playClip = function()
 		animationEnd = dm.world.timeofday + playingChannel.duration
 		playingChannel.sound_file.status = 0
 		local playerList = {}
-		local tvZLoc = tv.drop_location().z
+		local tvZLoc = tv:drop_location().z
 		behindSign.icon_state = "playing"
 		for _, player in dm.global_vars.GLOB.player_list do
-			if over_exec_usage(0.7)then
-				sleep()
-			end
+			-- if (_exec.time / _exec.limit) > 0.7 then
+			-- 	sleep()
+			-- end
 			local dist = dm.global_procs._get_dist(player, tv)
 			if (dist > 12 and not infiniteRange) then
 				continue
 			end
-			if (player.drop_location().z == tvZLoc or infiniteRange) then
+			if (player:drop_location().z == tvZLoc or infiniteRange) then
 				local playerSettings = getPlayerSettings(player.ckey)
 				if playerSettings.disableTv then continue end
-				player.playsound_local(nil, playingChannel.sound_file, 0, false, nil, 6, channel, true, playingChannel.sound_file, 17, 1, 1, true)
+				player:playsound_local(nil, playingChannel.sound_file, 0, false, nil, 6, channel, true, playingChannel.sound_file, 17, 1, 1, true)
 				local client = player.client
-				dm.global_procs._list_add(client.images, sign)
+				list.add(client.images, sign)
 				table.insert(playerList, { client = client, data = playerSettings })
 			end
 		end
@@ -501,7 +498,7 @@ if authToken ~= "" then
 		end
 
 		if responseData ~= "1" then
-			local playerClient = dm.global_vars.GLOB.directory:get(ckey)
+			local playerClient = dm.global_vars.GLOB.directory[ckey]
 			if behindSign.icon_state == "loading" and #channels == 0 then
 				behindSign.icon_state = "standby"
 			end
@@ -510,7 +507,7 @@ if authToken ~= "" then
 				return
 			end
 			local player = playerClient.mob
-			player.playsound_local(nil, "sound/effects/adminhelp.ogg", 75)
+			player:playsound_local(nil, "sound/effects/adminhelp.ogg", 75)
 			dm.global_procs.to_chat(player, "<font color='red'><b>Your video request was rejected.</b> This is because an error occured with the request. Please input appropriate video details to avoid this from happening again.</font>")
 			dm.global_procs.message_admins("TV: "..dm.global_procs.key_name_admin(player).." has been warned about their request due to bad input data.")
 			queryInProgress = false
@@ -535,9 +532,7 @@ if authToken ~= "" then
 		end
 		local response = request:into_response()
 		channel.icon_file = SS13.await(SS13.global_proc, "_new", "/icon", { file_name })
-		channel.title = response.headers:get("video-title")
-		local references = SS13.state.vars.references
-		references:add(channel.icon_file)
+		channel.title = response.headers["video-title"]
 		sleep()
 		local request = SS13.new("/datum/http_request")
 		local file_name = "tmp/custom_map_sound.ogg"
@@ -547,7 +542,7 @@ if authToken ~= "" then
 			sleep()
 		end
 		local response = request:into_response()
-		if response.errored == 1 or tonumber(response.headers:get("audio-length")) == nil then
+		if response.errored == 1 or tonumber(response.headers["audio-length"]) == nil then
 			queryInProgress = false
 			if behindSign.icon_state == "loading" and #channels == 0 then
 				behindSign.icon_state = "standby"
@@ -557,7 +552,7 @@ if authToken ~= "" then
 			return
 		end
 		channel.sound_file = SS13.new("/sound", file_name)
-		channel.duration = tonumber(response.headers:get("audio-length")) * 10
+		channel.duration = tonumber(response.headers["audio-length"]) * 10
 		table.insert(channels, { channel = channel, submitter = ckey, startPos = startPos })
 		table.remove(queuedRequests, 1)
 		channelCache[url] = channel
@@ -565,7 +560,7 @@ if authToken ~= "" then
 		queryInProgress = false
 		dm.global_procs.message_admins("TV: Loaded youtube video "..dm.global_procs.sanitize(channel.title).." - "..dm.global_procs.sanitize(url).." for use in the TV. "..createHref("skip="..escape(url), "SKIP"))
 		sleep()
-		if tv:is_null() then
+		if not dm.is_valid_ref(tv) then
 			return
 		end
 		if #channels == 1 then
@@ -576,9 +571,9 @@ if authToken ~= "" then
 			local tvZLoc = tv:drop_location().z
 			sleep()
 			for _, player in dm.global_vars.GLOB.player_list do
-				if over_exec_usage(0.7) then
-					sleep()
-				end
+				-- if (_exec.time / _exec.limit) > 0.7 then
+				-- 	sleep()
+				-- end
 				local dist = dm.global_procs._get_dist(player, tv)
 				if dist > 12 and not infiniteRange then
 					continue
@@ -588,7 +583,7 @@ if authToken ~= "" then
 					if playerSettings.disableTv then continue end
 					player:playsound_local(nil, currentChannel.sound_file, 0, false, nil, 6, channel, true, currentChannel.sound_file, 17, 1, 1, true)
 					local client = player.client
-					dm.global_procs._list_add(client.images, sign)
+					list.add(client.images, sign)
 				end
 			end
 			SS13.set_timeout(3 + (scaleConfig.extraWaitTime or 0), function()
@@ -604,7 +599,7 @@ end
 SS13.register_signal(tv, "parent_qdeleting", function()
 	dm.global_procs.qdel(behindSign)
 	for _, player in dm.global_vars.GLOB.player_list do
-		player.stop_sound_channel(channel)
+		player:stop_sound_channel(channel)
 	end
 	saveData()
 end)
@@ -615,7 +610,7 @@ local requestCounter = 0
 local canMakeRequest = function(user, isAdmin)
 	if onePerUser and not isAdmin then
 		if blockPlayerRequest[user.ckey] then
-			user.balloon_alert(user, "only 1 request at a time!")
+			user:balloon_alert(user, "only 1 request at a time!")
 			return false
 		end
 	end
@@ -625,7 +620,7 @@ end
 local makeRequest = function(user, isAdmin)
 	local ckey = user.ckey
 	if blocked[ckey] then
-		user.balloon_alert(user, "blocked from making requests!")
+		user:balloon_alert(user, "blocked from making requests!")
 		return
 	end
 	if not acceptingRequests and not isAdmin then
@@ -644,16 +639,24 @@ local makeRequest = function(user, isAdmin)
 			vidLength = 1200
 		end
 		playerOpen[ckey] = true
-		local input = SS13.await(SS13.global_proc, "tgui_input_list", user, "Input Youtube URL. Optionally include timestamp to start at a specific video location. Videos longer than "..vidLength.." seconds will be cut down in length.", "Request Youtube Video")
+		local input = SS13.await(
+			SS13.global_proc,
+			"tgui_input_text",
+			user,
+			"Input Youtube URL. Optionally include timestamp to start at a specific video location. Videos longer than "..vidLength.." seconds will be cut down in length.",
+			"Request Youtube Video"
+		)
 		playerOpen[ckey] = false
 		if not canMakeRequest(user, isAdmin) then
+			user:balloon_alert(user, "unable to make a request!")
 			return
 		end
 		if input == nil or input == "" then
+			user:balloon_alert(user, "invalid input!")
 			return
 		end
 		if queuedUrls[input] then
-			user.balloon_alert(user, "That request is already queued!")
+			user:balloon_alert(user, "That request is already queued!")
 			return
 		end
 		local duration = -1
@@ -673,7 +676,7 @@ local makeRequest = function(user, isAdmin)
 				dm.global_procs.message_admins("TV: "..dm.global_procs.key_name_admin(user).." queued the youtube video <span class='linkify'>"..scrubbed.."</span> to be played on the TV. "..createHref("skip="..escape(scrubbed)..";", "SKIP").." "..createHref("block=1;ckey="..ckey, "BLOCK"))
 				table.insert(queuedRequests, { url = scrubbed, ckey = ckey, startPos = startTime, duration = duration })
 				fetchVideo()
-				user.playsound_local(nil, "sound/misc/asay_ping.ogg", 15)
+				user:playsound_local(nil, "sound/misc/asay_ping.ogg", 15)
 				dm.global_procs.to_chat(user, "<font color='blue'><b>Your video request was queued.</b></font>")
 			else
 				dm.global_procs.message_admins("TV: "..dm.global_procs.key_name_admin(user).." requested the youtube video <span class='linkify'>"..scrubbed.."</span> to be played on the TV. "..createHref("link="..escape(scrubbed)..";ckey="..ckey..";startTime="..startTime..";duration="..duration..";play_id="..requestCounter, "PLAY").." "..createHref("reject=1;reject_id="..requestCounter..";ckey="..ckey, "REJECT").." "..createHref("block=1;ckey="..ckey, "BLOCK"))
@@ -699,8 +702,8 @@ local function openClientSettings(user)
 	data = data.."<div style='display: flex; margin-top: 4px;'><div style='flex-grow: 1; color: #98B0C3;'>TV enabled for self:</div><div>"..tvDisableToggle.."</div></div>"
 	data = data.."<div style='display: flex; margin-top: 4px;'><div style='flex-grow: 1; color: #98B0C3;'>Change TV audio mode:</div><div>"..createHref("client_audio_mode=1", tostring(playerSettings.audioMode), false).."</div></div>"
 	data = data.."<div style='display: flex; margin-top: 4px;'><div style='flex-grow: 1; color: #98B0C3;'>Change TV volume:</div><div>"..createHref("client_audio_volume=1", tostring(playerSettings.volume), false).."</div></div>"
-	browser.set_content(data)
-	browser.open()
+	browser:set_content(data)
+	browser:open()
 end
 
 getLink = getLink or dm.global_procs._regex("(v=|v/|vi=|vi/|youtu.be/)([a-zA-Z0-9_-]+)")
@@ -723,11 +726,11 @@ local function openAdminSettings(user)
 	data = data.."<h2>Queued Channels</h2>"
 	for position, nextChannel in channels do
 		local sanitizedLink = dm.global_procs.sanitize(nextChannel.channel.url)
-		getLink.Find(nextChannel.channel.url)
+		getLink:Find(nextChannel.channel.url)
 		local catchGroup = getLink.group
 		local ytLink = ""
-		if catchGroup.len <= 2 then
-			ytLink = "https://www.youtube.com/watch?v="..catchGroup:get(2).."&t="..tostring(nextChannel.startPos ~= -1 and nextChannel.startPos or 0)
+		if #catchGroup <= 2 then
+			ytLink = "https://www.youtube.com/watch?v="..catchGroup[2].."&t="..tostring(nextChannel.startPos ~= -1 and nextChannel.startPos or 0)
 		else
 			ytLink = "INVALID YOUTUBE LINK!"
 		end
@@ -745,11 +748,11 @@ local function openAdminSettings(user)
 	data = data.."<h2>Processing Requests</h2>"
 	for position, request in queuedRequests do
 		local sanitizedLink = dm.global_procs.sanitize(request.url)
-		getLink.Find(request.url)
+		getLink:Find(request.url)
 		local catchGroup = getLink.group
 		local ytLink = ""
-		if catchGroup.len <= 2 then
-			ytLink = "https://www.youtube.com/watch?v="..catchGroup:get(2).."&t="..tostring(request.startPos ~= -1 and request.startPos or 0)
+		if #catchGroup <= 2 then
+			ytLink = "https://www.youtube.com/watch?v="..catchGroup[2].."&t="..tostring(request.startPos ~= -1 and request.startPos or 0)
 		else
 			ytLink = "INVALID YOUTUBE LINK!"
 		end
@@ -763,12 +766,13 @@ local function openAdminSettings(user)
 			data = data.."<a href='"..ytLink.."'>Open Youtube Link</a>"
 		end
 	end
-	browser.set_content(data)
-	browser.open()
+	browser:set_content(data)
+	browser:open()
 end
 SS13.register_signal(tv, "atom_attack_hand", function(_, user)
 	makeRequest(user)
 end)
+
 local adminOpen = {}
 local handledRequests = {}
 SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
@@ -777,34 +781,34 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 		return
 	end
 	SS13.set_timeout(0, function()
-		if href_list:get("voteskip") then
+		if href_list["voteskip"] then
 			if not playingChannel then
 				return
 			end
 			if voteSkipData.voteSkipVoters[userCkey] then
-				user.balloon_alert(user, "already voted to skip")
+				user:balloon_alert(user, "already voted to skip")
 				return
 			end
 			voteSkipData.voteSkip += 1
 			voteSkipData.voteSkipVoters[userCkey] = true
 			if voteSkipData.voteSkip >= voteSkipRequired then
-				tv.say("Voteskipped current channel.")
+				tv:say("Voteskipped current channel.")
 				dm.global_procs.message_admins("TV: Skipped "..dm.global_procs.sanitize(playingChannel.title or ""))
 				playingChannel = nil
 			end
-			user.balloon_alert(user, "voted to skip current channel")
-		elseif href_list:get("settings") then
+			user:balloon_alert(user, "voted to skip current channel")
+		elseif href_list["settings"] then
 			openClientSettings(user)
-		elseif href_list:get("client_disable") then
+		elseif href_list["client_disable"] then
 			local playerSettings = getPlayerSettings(userCkey)
-			if href_list:get("client_disable") == "1" then
+			if href_list["client_disable"] == "1" then
 				playerSettings.disableTv = true
 			else
 				playerSettings.disableTv = false
 			end
 			saveRequired = true
 			openClientSettings(user)
-		elseif href_list:get("client_audio_mode") then
+		elseif href_list["client_audio_mode"] then
 			adminOpen[userCkey] = true
 			local input = SS13.await(SS13.global_proc, "tgui_alert", user, "Set audio mode for how you will hear the TV", "Set audio mode", { AUDIO_DIRECTIONAL, AUDIO_MONO })
 			adminOpen[userCkey] = false
@@ -815,7 +819,7 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 			playerSettings.audioMode = input
 			saveRequired = true
 			openClientSettings(user)
-		elseif href_list:get("client_audio_volume") then
+		elseif href_list["client_audio_volume"] then
 			local playerSettings = getPlayerSettings(userCkey)
 			adminOpen[userCkey] = true
 			local newVolume = SS13.await(SS13.global_proc, "tgui_input_number", user, "Please input new audio volume", "TV audio volume", playerSettings.volume, 100, 1)
@@ -828,12 +832,12 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 			openClientSettings(user)
 		end
 		if userCkey == admin or trustedAdmins[userCkey] then
-			if href_list:get("link") ~= nil then
-				local youtubeLink = href_list:get("link")
-				local playerCkey = href_list:get("ckey")
-				local startTime = tonumber(href_list:get("startTime")) or 0
-				local duration = tonumber(href_list:get("duration")) or 1200
-				local playId = href_list:get("play_id")
+			if href_list["link"] ~= nil then
+				local youtubeLink = href_list["link"]
+				local playerCkey = href_list["ckey"]
+				local startTime = tonumber(href_list["startTime"]) or 0
+				local duration = tonumber(href_list["duration"]) or 1200
+				local playId = href_list["play_id"]
 				if handledRequests[playId] then
 					return
 				end
@@ -851,19 +855,19 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 				dm.global_procs.message_admins("TV: "..dm.global_procs.key_name_admin(user).." played "..youtubeLink)
 				table.insert(queuedRequests, { url = youtubeLink, ckey = playerCkey, startPos = startTime, duration = duration })
 				fetchVideo()
-				local playerClient = dm.global_vars.GLOB.directory:get(playerCkey)
+				local playerClient = dm.global_vars.GLOB.directory[playerCkey]
 				if playerClient then
 					local player = playerClient.mob
-					player.playsound_local(nil, "sound/misc/asay_ping.ogg", 15)
+					player:playsound_local(nil, "sound/misc/asay_ping.ogg", 15)
 					dm.global_procs.to_chat(player, "<font color='blue'><b>Your video request was queued.</b></font>")
 				end
-			elseif href_list:get("reject") ~= nil then
-				local rejectId = href_list:get("reject_id")
+			elseif href_list["reject"] ~= nil then
+				local rejectId = href_list["reject_id"]
 				if handledRequests[rejectId] then
 					return
 				end
-				local ckey = href_list:get("ckey")
-				local playerClient = dm.global_vars.GLOB.directory:get(ckey)
+				local ckey = href_list["ckey"]
+				local playerClient = dm.global_vars.GLOB.directory[ckey]
 				if playerClient == nil then
 					return
 				end
@@ -871,21 +875,21 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 				local input = SS13.await(SS13.global_proc, "tgui_input_text", user, "Input reason as to why you want to reject this request.", "Reject Reason")
 				adminOpen[userCkey] = false
 				local player = playerClient.mob
-				player.playsound_local(nil, "sound/effects/adminhelp.ogg", 75)
+				player:playsound_local(nil, "sound/effects/adminhelp.ogg", 75)
 				dm.global_procs.to_chat(player, "<font color='red'><b>Your video request was rejected.</b> This is for the following reason: "..input.."</font>")
 				dm.global_procs.message_admins("TV: "..dm.global_procs.key_name_admin(player).." has been warned about their request by "..dm.global_procs.key_name_admin(user)..".")
 				handledRequests[rejectId] = true
-			elseif href_list:get("block") ~= nil then
+			elseif href_list["block"] ~= nil then
 				if blocked[ckey] then
 					return
 				end
-				local ckey = href_list:get("ckey")
+				local ckey = href_list["ckey"]
 				blocked[ckey] = true
-				player.playsound_local(nil, "sound/effects/adminhelp.ogg", 75)
+				player:playsound_local(nil, "sound/effects/adminhelp.ogg", 75)
 				dm.global_procs.to_chat(player, "<font color='red'><b>You have been blocked from making any further video requests.</b></font>")
 				dm.global_procs.message_admins("TV: "..ckey.." has been blocked from making any more requests by "..dm.global_procs.key_name_admin(user)..".")
-			elseif href_list:get("skip") ~= nil then
-				local toSkip = href_list:get("skip")
+			elseif href_list["skip"] ~= nil then
+				local toSkip = href_list["skip"]
 				local foundOne = false
 				local i = 2
 				local playersToNotify = {}
@@ -916,21 +920,21 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 				if foundOne then
 					dm.global_procs.message_admins(TV) dm.global_procs.key_name_admin(user)" skipped "dm.global_procs.sanitize(toSkip)
 				end
-			elseif href_list:get("adminsettings") then
+			elseif href_list["adminsettings"] then
 				openAdminSettings(user)
-			elseif href_list:get("disable_requests") then
-				if href_list:get("disable_requests") == "1" then
+			elseif href_list["disable_requests"] then
+				if href_list["disable_requests"] == "1" then
 					acceptingRequests = false
 				else
 					acceptingRequests = true
 				end
-			elseif href_list:get("disable_one_per_user") then
-				if href_list:get("disable_one_per_user") == "1" then
+			elseif href_list["disable_one_per_user"] then
+				if href_list["disable_one_per_user"] == "1" then
 					onePerUser = false
 				else
 					onePerUser = true
 				end
-			elseif href_list:get("admin_set_voteskip") then
+			elseif href_list["admin_set_voteskip"] then
 				adminOpen[userCkey] = true
 				local newVoteSkipAmount = SS13.await(SS13.global_proc, "tgui_input_number", user, "Please input new vote skip boundary", "TV vote skip boundary", voteSkipRequired, 100, 1)
 				adminOpen[userCkey] = false
@@ -939,7 +943,7 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 				end
 				voteSkipRequired = newVoteSkipAmount
 			end
-			if href_list:get("ui") then
+			if href_list["ui"] then
 				openAdminSettings(user)
 			end
 		end
@@ -951,16 +955,16 @@ SS13.register_signal(tv, "atom_examine", function(_, examiner, examine_list)
 	if trustedAdmins[ckey] then
 		settingsData = settingsData.." "..createHref("adminsettings=1", "OPEN ADMIN TV SETTINGS")
 	end
-	examine_list:add("<span class='notice'>"..settingsData.."</span>")
+	list.add(examine_list, "<span class='notice'>"..settingsData.."</span>")
 	if acceptingRequests then
-		examine_list:add("<span class='notice'>Use ctrl + click to request a video.</span>")
+		list.add(examine_list, "<span class='notice'>Use ctrl + click to request a video.</span>")
 	else
-		examine_list:add("<span class='danger'>This television is not accepting requests right now.</span>")
+		list.add(examine_list, "<span class='danger'>This television is not accepting requests right now.</span>")
 	end
 
 	if playingChannel ~= nil then
-		examine_list:add("<span class='notice'>Currently playing "..(dm.global_procs.sanitize(playingChannel.title) or "").."<br/><span class='linkify'>"..(dm.global_procs.sanitize(playingChannel.url) or "").."</span></span>")
-		examine_list:add("<span class='danger'>There are currently "..tostring(voteSkipData.voteSkip or 0).."/"..tostring(voteSkipRequired).." votes to skip "..createHref("voteskip=1", "VOTE SKIP").."</span>")
+		list.add(examine_list, "<span class='notice'>Currently playing "..(dm.global_procs.sanitize(playingChannel.title) or "").."<br/><span class='linkify'>"..(dm.global_procs.sanitize(playingChannel.url) or "").."</span></span>")
+		list.add(examine_list, "<span class='danger'>There are currently "..tostring(voteSkipData.voteSkip or 0).."/"..tostring(voteSkipRequired).." votes to skip "..createHref("voteskip=1", "VOTE SKIP").."</span>")
 	end
 
 end)
