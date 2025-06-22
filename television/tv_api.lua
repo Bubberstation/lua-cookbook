@@ -7,7 +7,7 @@ local trustedAdmins = {
 }
 -- play this https://www.youtube.com/watch?v=dQw4w9WgXcQ ;)
 -- The auth token. You'll need to update this every time you run the script because the python script generates a new one each time it runs for security purposes.
-authToken = "pqteDnSkPJtOKIFRNUGGC" -- warning, run webserver.py on the same dir as your console is at
+authToken = "oJBOWVMpKoAytdOCAfMlM" -- warning, run webserver.py on the same dir as your console is at
 -- Whether users can submit requests or not.
 local acceptingRequests = true
 -- Whether it's one request per user until their video is played
@@ -90,6 +90,7 @@ local sign = SS13.new("/obj", nil, tv)
 sign.layer = behindSign.layer + 1
 sign.icon_state = "off"
 sign.name = "Video Sign"
+sign.mouse_opacity = 0
 list.add(tv.vis_contents, sign)
 
 local scales = {
@@ -283,9 +284,9 @@ local function startTvLoop(players)
 			currentChannel.sound_file.status = 0
 			local tvZLoc = tv:drop_location().z
 			for _, player in dm.global_vars.GLOB.player_list do
-				if (_exec.time / _exec.limit) > 0.7 then
-					sleep()
-				end
+				-- if (_exec.time / _exec.limit) > 0.7 then
+				-- 	sleep()
+				-- end
 				local dist = dm.global_procs._get_dist(player, tv)
 				if (dist > 12 and not infiniteRange) then
 					continue
@@ -339,9 +340,9 @@ playClip = function()
 		local tvZLoc = tv:drop_location().z
 		behindSign.icon_state = "playing"
 		for _, player in dm.global_vars.GLOB.player_list do
-			if (_exec.time / _exec.limit) > 0.7 then
-				sleep()
-			end
+			-- if (_exec.time / _exec.limit) > 0.7 then
+			-- 	sleep()
+			-- end
 			local dist = dm.global_procs._get_dist(player, tv)
 			if (dist > 12 and not infiniteRange) then
 				continue
@@ -575,9 +576,9 @@ if authToken ~= "" then
 			local tvZLoc = tv:drop_location().z
 			sleep()
 			for _, player in dm.global_vars.GLOB.player_list do
-				if (_exec.time / _exec.limit) > 0.7 then
-					sleep()
-				end
+				-- if (_exec.time / _exec.limit) > 0.7 then
+				-- 	sleep()
+				-- end
 				local dist = dm.global_procs._get_dist(player, tv)
 				if dist > 12 and not infiniteRange then
 					continue
