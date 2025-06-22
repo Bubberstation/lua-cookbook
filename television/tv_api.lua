@@ -70,6 +70,7 @@ local currentChannel = nil
 local behindSign = SS13.new("/obj")
 behindSign.icon_state = "standby"
 behindSign.vis_flags = 16
+behindSign.name = "TV Sign"
 do
 	local request = SS13.new("/datum/http_request")
 	local file_name = "tmp/custom_map_icon.dmi"
@@ -85,8 +86,11 @@ end
 local tv = SS13.new("/obj/structure/showcase/machinery/tv", spawnLocation)
 list.add(tv.vis_contents, behindSign)
 
-local sign = SS13.new("/image", nil, tv)
+local sign = SS13.new("/obj", nil, tv)
+sign.layer = behindSign.layer + 1
 sign.icon_state = "off"
+sign.name = "Video Sign"
+list.add(tv.vis_contents, sign)
 
 local scales = {
 	[1] = {
@@ -279,9 +283,9 @@ local function startTvLoop(players)
 			currentChannel.sound_file.status = 0
 			local tvZLoc = tv:drop_location().z
 			for _, player in dm.global_vars.GLOB.player_list do
-				-- if (_exec.time / _exec.limit) > 0.7 then
-				-- 	sleep()
-				-- end
+				if (_exec.time / _exec.limit) > 0.7 then
+					sleep()
+				end
 				local dist = dm.global_procs._get_dist(player, tv)
 				if (dist > 12 and not infiniteRange) then
 					continue
@@ -335,9 +339,9 @@ playClip = function()
 		local tvZLoc = tv:drop_location().z
 		behindSign.icon_state = "playing"
 		for _, player in dm.global_vars.GLOB.player_list do
-			-- if (_exec.time / _exec.limit) > 0.7 then
-			-- 	sleep()
-			-- end
+			if (_exec.time / _exec.limit) > 0.7 then
+				sleep()
+			end
 			local dist = dm.global_procs._get_dist(player, tv)
 			if (dist > 12 and not infiniteRange) then
 				continue
@@ -571,9 +575,9 @@ if authToken ~= "" then
 			local tvZLoc = tv:drop_location().z
 			sleep()
 			for _, player in dm.global_vars.GLOB.player_list do
-				-- if (_exec.time / _exec.limit) > 0.7 then
-				-- 	sleep()
-				-- end
+				if (_exec.time / _exec.limit) > 0.7 then
+					sleep()
+				end
 				local dist = dm.global_procs._get_dist(player, tv)
 				if dist > 12 and not infiniteRange then
 					continue
@@ -918,7 +922,7 @@ SS13.register_signal(tv, "handle_topic", function(_, user, href_list)
 				end
 				queuedUrls[toSkip] = false
 				if foundOne then
-					dm.global_procs.message_admins(TV) dm.global_procs.key_name_admin(user)" skipped "dm.global_procs.sanitize(toSkip)
+					dm.global_procs.message_admins("TV "..dm.global_procs.key_name_admin(user).." skipped "..dm.global_procs.sanitize(toSkip))
 				end
 			elseif href_list["adminsettings"] then
 				openAdminSettings(user)
