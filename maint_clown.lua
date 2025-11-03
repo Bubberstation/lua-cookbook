@@ -555,14 +555,14 @@ local function setupAntag(mind)
 			statString = statString .. "<br/>%s"
 		end
 		antagData.image.maptext = string.format(
-            "<span class='maptext'>Level: %d<br/>"..statString.."%s</span>",
-            antagData.level,
-            "Knife: "..antagData.stats.Knife,
-            "Beartrap: "..antagData.stats.Beartrap,
-            "Traversing: "..antagData.stats.Traversing,
-            "Body: "..antagData.stats.Body,
-            antagData.unallocatedPoints ~= 0 and "<br />Unallocated Ability Points: "..antagData.unallocatedPoints or ""
-        )
+			"<span class='maptext'>Level: %d<br/>"..statString.."%s</span>",
+			antagData.level,
+			"Knife: "..antagData.stats.Knife,
+			"Beartrap: "..antagData.stats.Beartrap,
+			"Traversing: "..antagData.stats.Traversing,
+			"Body: "..antagData.stats.Body,
+			antagData.unallocatedPoints ~= 0 and "<br />Unallocated Ability Points: "..antagData.unallocatedPoints or ""
+		)
 		if antagData.unallocatedPoints ~= 0 then
 			antagData.button.maptext = "<span class='maptext' style='color: #ffa8a8;'>Spend Ability Points</span>"
 		else
@@ -827,14 +827,13 @@ local function createPlayer()
 	player:apply_pref_name(dm.global_procs._text2path("/datum/preference/name/clown"), client)
 	dm.global_procs.to_chat(player, "<span class='bolddanger'>Recently I've been visited by a lot of VISIONS. They're all about the great HONKMOTHER, and the belief It brings. I will do EVERYTHING to spread the belief of ANARCHISM, to show that ANARCHY must be embraced.</span>")
 	dm.global_procs.to_chat(player, "<span class='notice'>Kill people using your reverse beartraps to increase your level so that you can upgrade your abilities. The maximum level of each ability is level 5.</span>")
-	local knife = SS13.new("/obj/item/knife/butcher")
-	knife.name = "sharpened butcher's cleaver"
-	knife.force = 20
+	local knife = SS13.new("/obj/item/knife")
 	player:equip_to_slot_or_del(knife, 8192, true)
+	local stone = SS13.new("/obj/item/sharpener/cult")
+	player:equip_to_slot_or_del(stone, 16384, true)
 	local shirt = player.w_uniform
 	shirt.has_sensor = 0
 	shirt.sensor_mode = 0
-	player:update_suit_sensors()
 	local shoes = player.shoes
 	dm.global_procs._add_trait(shoes, "nodrop", "clown_antag")
 	shoes.resistance_flags = 243
