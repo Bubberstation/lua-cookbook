@@ -83,7 +83,7 @@ local function setupAntag(mind)
 			},
 			Traversing = {
 				[1] = "reduced shoe slowdown",
-				[2] = "smash locked doors down with hands (doesn't work right now sorry), shock immunity",
+				[2] = "smash locked doors down with hands, shock immunity",
 				[3] = "slip immunity, +5s c/d reduction on hit",
 				[4] = "reduced shoe slowdown",
 				[5] = "pull people into the floorboards"
@@ -235,7 +235,7 @@ local function setupAntag(mind)
 		player.density = false
 		player.pixel_z = -32
 		if floorboardVictim ~= nil and SS13.is_valid(floorboardVictim) then
-			floorboardVictim:Knockdown(20)
+			floorboardVictim:Immobilize(20)
 			floorboardVictim.pixel_z = -14
 			floorboardVictim.anchored = true
 			dm.global_procs._add_trait(floorboardVictim, "block_transformations", "clown_antag")
@@ -344,7 +344,7 @@ local function setupAntag(mind)
 				end
 				active = true
 				dm.global_procs.playsound(player, "sound/misc/scary_horn.ogg", 50, true)
-				player:Stun(1)
+				player:Immobilize(1)
 				player.anchored = true
 				dm.global_procs._add_trait(player, "block_transformations", "clown_antag")
 				player.density = false
@@ -676,7 +676,7 @@ local function setupAntag(mind)
 				if locked then
 					if antagData.stats.Traversing >= 2 and player.combat_mode == 1 then
 						player:do_attack_animation(target, "smash")
-						player:Stun(10)
+						player:Immobilize(20)
 						player:visible_message("<span class='danger'>"..player.name.." uses their sheer strength to smash the "..target.name.."</span>", "<span class='danger'>You use your sheer strength to smash the "..target.name..", leaving you momentarily stunned.</span>")
 						target:take_damage(50, "brute", "", false)
 						dm.global_procs.playsound(target, "sound/effects/meteorimpact.ogg", 100, true)
@@ -684,9 +684,17 @@ local function setupAntag(mind)
 						return
 					end
 				else
-					target:try_to_crowbar(nil, player, true)
+					target:attack_alien(player)
 				end
 				return 1
+			elseif SS13.istype(target, "/obj/structure/door_assembly") then
+				if antagData.stats.Traversing >= 2 and player.combat_mode == 1 then
+					player:do_attack_animation(target, "smash")
+					player:Immobilize(20)
+					player:visible_message("<span class='danger'>"..player.name.." uses their sheer strength to smash the "..target.name.."</span>", "<span class='danger'>You use your sheer strength to smash the "..target.name..", leaving you momentarily stunned.</span>")
+					target:take_damage(50, "brute", "", false)
+					dm.global_procs.playsound(target, "sound/effects/meteorimpact.ogg", 100, true)
+				end
 			end
 		end)
 		local isAttacking = false
@@ -748,10 +756,9 @@ local function setupAntag(mind)
 			end
 		end)
 		local hud = player.hud_used
-		local hudElements = hud.static_inventory
-		list.add(hudElements, antagData.image)
-		list.add(hudElements, antagData.button)
-		list.add(hudElements, antagData.showInfo)
+		hud:add_screen_object(antagData.image, "clown_image")
+		hud:add_screen_object(antagData.button, "clown_button")
+		hud:add_screen_object(antagData.showInfo, "clown_info")
 		hud:show_hud(hud.hud_version)
 		updateVisualData()
 	end
