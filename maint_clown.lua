@@ -3,6 +3,7 @@ local SS13 = require("SS13")
 SS13.wait(1)
 
 local ADMIN_MODE = false
+local STARTING_ABILITY_POINTS = 5
 local user = SS13.get_runner_client()
 local SHOULD_ASK_GHOSTS = SS13.await(SS13.global_proc, "tgui_alert", user, "Ask ghosts for a maintenance clown?", "Maintenance Clown", { "No", "Yes" }) == "Yes"
 local function notifyPlayer(ply, msg)
@@ -59,7 +60,7 @@ local function setupAntag(mind)
 		image = SS13.new("/atom/movable/screen/text"),
 		showInfo = SS13.new("/atom/movable/screen/text"),
 		button = SS13.new("/atom/movable/screen/text"),
-		unallocatedPoints = 5,
+		unallocatedPoints = STARTING_ABILITY_POINTS,
 		stats = {
 			Knife = 0,
 			Beartrap = 0,
@@ -68,39 +69,39 @@ local function setupAntag(mind)
 		},
 		stats_upgrade = {
 			Knife = {
-				[1] = "increased attack speed",
-				[2] = "increased stamina damage on secondary attack",
-				[3] = "increased damage (5+)",
-				[4] = "increased attack speed",
-				[5] = "increased attack speed"
+				[1] = "attack cooldown 0.8s -> 0.6s",
+				[2] = "secondary attack stamina damage x1.5",
+				[3] = "+5 knife force",
+				[4] = "attack cooldown 0.6s -> 0.4s",
+				[5] = "attack cooldown 0.4s -> 0.2s"
 			},
 			Beartrap = {
-				[1] = "-10s activation time",
-				[2] = "-10s activation time",
-				[3] = "apply through helmets",
-				[4] = "explode on target death",
-				[5] = "increased explosion radius and power"
+				[1] = "trap kill timer 40s -> 30s",
+				[2] = "trap kill timer 30s -> 20s",
+				[3] = "applying a trap knocks the target's helmet off",
+				[4] = "a trap kill sets off a 2 tile light explosion",
+				[5] = "blast becomes 3 tiles, plus 5 tiles of flame and a 7 tile flash"
 			},
 			Traversing = {
-				[1] = "reduced shoe slowdown",
-				[2] = "smash locked doors down with hands, shock immunity",
-				[3] = "slip immunity, +5s c/d reduction on hit",
-				[4] = "reduced shoe slowdown",
-				[5] = "pull people into the floorboards"
+				[1] = "clown shoe slowdown down to 0.25",
+				[2] = "smash bolted/welded doors bare handed (50 damage a swing, 2s self-stun), shock immunity",
+				[3] = "slip immunity, knife hits refund 10s of jaunt cooldown instead of 5s",
+				[4] = "clown shoe slowdown down to 0.05",
+				[5] = "drag whoever you are pulling into the floorboards with you"
 			},
 			Body = {
-				[1] = "+10% damage reduction, virus and rad immunity",
-				[2] = "+5% damage reduction, immune to flash",
-				[3] = "+5% damage reduction, thermal vision",
-				[4] = "+3% damage reduction, space immunity",
-				[5] = "+2% damage reduction, x-ray vision"
+				[1] = "-10% of all damage taken, virus and radiation immunity",
+				[2] = "-5% more damage taken (-15% total), flash immunity",
+				[3] = "-5% more damage taken (-20% total), thermal vision",
+				[4] = "-3% more damage taken (-23% total), pressure and temperature immunity",
+				[5] = "-2% more damage taken (-25% total), x-ray vision"
 			}
 		},
 		stats_description = {
-			Knife = "Your ability to handle a knife. You also have a secondary attack, which you can use by right clicking with a knife, that deals stamina damage and drastically reduces the brute damage you deal. The skill is transferrable to any knife. Higher damage knives will give more lethality and stamina damage.",
-			Beartrap = "Your ability to apply reverse beartraps to people. Killing someone using your reverse beartraps is required for you to gain levels. Reverse beartraps have a base 30 second timer before they set off and you can put them on people by clicking them with it whilst it's in hand your hands.",
-			Traversing = "Your ability to travel quickly around the station. Use in maintenance to jump into the floorboards where you can then scurry around to find your next victim. When exiting floorboards, it enters into cooldown for 100 seconds. Attacking people with a knife will decrease the cooldown by 5 seconds. You can also pry open doors you don't have access to by left clicking on them with your left hand.",
-			Body = "Your ability to survive rough conditions and adapt to your environment. By default, you are immune to knockdown similarly to a hulk, but you can still take stamina damage, which will slow you down."
+			Knife = "Your ability to handle a knife. The skill follows you rather than the blade, so any knife works and a higher force one scales both the lethal and the stamina numbers.<br/>Left click is a normal attack, on a 0.8 second cooldown to start with; levels 1, 4 and 5 each take 0.2s off that, down to 0.2s.<br/>Right click is a secondary attack: your brute damage drops to a quarter of the knife's force, and the target takes the knife's force as stamina damage instead (x1.5 from level 2).<br/>Landing a knife hit on a living player also refunds 5 seconds of your Traversing cooldown.",
+			Beartrap = "Your ability to apply reverse beartraps to people. Killing someone with one is the only way you gain levels. Click someone with a trap in your hands to put it on their head; a fresh trap costs a 30 second ability cooldown.<br/>A reverse beartrap normally gives its wearer 60 seconds before it kills them yours are set to 40 seconds from the start, then 30 at level 1 and 20 at level 2.<br/>Anyone who is neither you nor the wearer trying to pull a trap off by hand destroys it instead.",
+			Traversing = "Your ability to travel quickly around the station. Use the ability in maintenance to drop into the floorboards, where you can scurry around unseen, unbreathing and immune to pressure until you climb back out.<br/>Climbing out puts the ability on a 100 second cooldown, and every knife hit you land on a living player takes 5 seconds off it (10 from level 3).<br/>You can also force open any door you have no access to by left clicking it bare handed; it takes 5 seconds and being interrupted cancels it. From level 2, combat mode instead smashes bolted or welded doors open the hard way.",
+			Body = "Your ability to survive rough conditions and adapt to your environment. Every level takes a flat percentage off every kind of damage you take: brute, burn, toxin, oxygen, stamina, brain, bleed, hunger, temperature, pressure and shock alike for 25% off in total at level 5.<br/>You are immune to knockdown from the start, like a hulk, but stamina damage still lands and will slow you down."
 		},
 		stats_upgrade_function = {
 			Knife = {},
@@ -676,7 +677,8 @@ local function setupAntag(mind)
 		local browser = SS13.new("/datum/browser", clickingUser, "Maintenance Clown Help", "Maintenance Clown Help", 600, 700)
 		local data = "<h2>Maintenance Clown Infodex</h2>"
 		data = data .. "As the maintenance clown, your goal is to embrace and cause anarchy. To gain levels, so that you can upgrade your abilities, you must kill people using your reverse beartraps."
-		data = data .. "<br/>You start with 3 ability points. Depending on your preferred playstyle, you can choose how to allocate your points. It's recommended to get at least 1 point in traversal so that you have a decent amount of movespeed."
+		data = data .. "<br/>You start with "..tostring(STARTING_ABILITY_POINTS).." ability points and gain one more per level. Depending on your preferred playstyle, you can choose how to allocate them. It's recommended to get at least 1 point in Traversing so that you have a decent amount of movespeed."
+		data = data .. "<br/><br/>Your character level caps how far a single ability can be pushed: at level 1 no ability may go past 3, at level 2 no further than 4, and only from level 3 onwards can anything reach 5."
 		for stat, levelData in antagData.stats_upgrade do
 			data = data .. "<h3>"..stat.."</h3>"
 			data = data .. antagData.stats_description[stat] .. "<br/>"
@@ -689,6 +691,53 @@ local function setupAntag(mind)
 		end
 		browser:set_content(data)
 		browser:open()
+	end)
+	-- antagData is a local in here, so nothing outside this closure can reach it - not the
+	-- lua editor's globals tab, and not Luau either, which ships no debug.getupvalue. Give
+	-- admins a link instead. It cannot point at the clown: /mob/living/carbon/human/Topic()
+	-- never calls its parent, so a mob never fires handle_topic. A bare /obj left in
+	-- nullspace does, and hrefs resolve by ref regardless of where the datum lives.
+	local adminPanel = SS13.new("/obj")
+	adminPanel.name = "maintenance clown admin panel"
+	local adminPanelOpen = {}
+	local function isAdmin(candidate)
+		if candidate == nil then
+			return false
+		end
+		local candidateClient = candidate.client
+		return candidateClient ~= nil and candidateClient.holder ~= nil
+	end
+	local function adminPointsLink()
+		return "<a href='?src="..dm.global_procs.REF(adminPanel)..";clown_set_points=1'>SET ABILITY POINTS</a>"
+	end
+	SS13.register_signal(adminPanel, "handle_topic", function(_, topicUser, href_list)
+		if href_list["clown_set_points"] == nil or not isAdmin(topicUser) then
+			return
+		end
+		local adminCkey = topicUser.ckey
+		if adminCkey == nil or adminPanelOpen[adminCkey] then
+			return
+		end
+		SS13.set_timeout(0, function()
+			adminPanelOpen[adminCkey] = true
+			local newPoints = SS13.await(
+				SS13.global_proc,
+				"tgui_input_number",
+				topicUser,
+				"Set the maintenance clown's unallocated ability points.",
+				"Maintenance Clown",
+				antagData.unallocatedPoints,
+				100,
+				0
+			)
+			adminPanelOpen[adminCkey] = false
+			if newPoints == nil or newPoints == antagData.unallocatedPoints then
+				return
+			end
+			dm.global_procs.message_admins("Maintenance Clown: "..dm.global_procs.key_name_admin(topicUser).." set the unallocated ability points to "..tostring(newPoints)..".")
+			antagData.unallocatedPoints = newPoints
+			updateVisualData()
+		end)
 	end)
 	local function smashOpen(player, target)
 		player:do_attack_animation(target, "smash")
@@ -733,6 +782,9 @@ local function setupAntag(mind)
 					"Body: "..antagData.stats.Body,
 					"Unallocated Ability Points: "..antagData.unallocatedPoints
 				))
+				if isAdmin(observing) then
+					list.add(examineList, "<span class='notice'>("..adminPointsLink()..")</span>")
+				end
 			end
 		end)
 		SS13.register_signal(player, "human_pre_attack_hand", function(_, target)
@@ -824,10 +876,9 @@ local function setupAntag(mind)
 		updateVisualData()
 	end
 	local function unregisterSignals(player)
-		SS13.unregister_signal(player, "human_early_unarmed_attack")
 		SS13.unregister_signal(player, "atom_examine")
+		SS13.unregister_signal(player, "human_pre_attack_hand")
 		SS13.unregister_signal(player, "mob_item_attack")
-		SS13.unregister_signal(player, "mob_clickon")
 		local hud = player.hud_used
 		local hudElements = hud.static_inventory
 		list.remove(hudElements, antagData.image)
