@@ -70,7 +70,7 @@ local function setupAntag(mind)
 			Knife = {
 				[1] = "increased attack speed",
 				[2] = "increased stamina damage on secondary attack",
-				[3] = "increased damage",
+				[3] = "increased damage (5+)",
 				[4] = "increased attack speed",
 				[5] = "increased attack speed"
 			},
@@ -202,9 +202,16 @@ local function setupAntag(mind)
 	abstract_icon.icon_state = "mfoam"
 	local jaunter = nil
 	local active = false
+	local exiting = false
 	local floorboardVictim
 	local function exitFloorboards(turf, force)
+		if exiting then
+			return
+		end
 		local player = jumpIntoFloorboards.owner
+		if player == nil or not SS13.is_valid(player) then
+			return
+		end
 		if not force then
 			local area = turf.loc
 			local inValidArea = false
@@ -225,6 +232,9 @@ local function setupAntag(mind)
 				end
 			end
 		end
+		exiting = true
+		-- nothing may start a second exit once this one begins sleeping below
+		SS13.unregister_signal(player, "mob_statchange")
 		dm.global_procs.playsound(player, "sound/misc/scary_horn.ogg", 50, true)
 		active = true
 		if not ADMIN_MODE then
@@ -251,6 +261,15 @@ local function setupAntag(mind)
 		turf.alpha = 1
 		dm.global_procs._animate(abstract_icon, { pixel_w = 32 }, 5)
 		SS13.wait(0.5)
+		if not SS13.is_valid(player) then
+			dm.global_procs.qdel(jaunter)
+			jaunter = nil
+			abstract_icon:moveToNullspace()
+			turf.alpha = 255
+			exiting = false
+			active = false
+			return
+		end
 		local itemsToUnset = {}
 		for _, item in turf.contents do
 			if item.anchored ~= 0 and not SS13.istype(item, "/mob") then
@@ -262,7 +281,6 @@ local function setupAntag(mind)
 		if floorboardVictim ~= nil and SS13.is_valid(floorboardVictim) then
 			floorboardVictim:forceMove(turf)
 		end
-		SS13.unregister_signal(player, "mob_statchange")
 		dm.global_procs.qdel(jaunter)
 		jaunter = nil
 		if floorboardVictim ~= nil and SS13.is_valid(floorboardVictim) then
@@ -300,6 +318,7 @@ local function setupAntag(mind)
 		jumpIntoFloorboards.name = "Jump into the floorboards"
 		jumpIntoFloorboards.button_icon_state = "origami_on"
 		jumpIntoFloorboards:build_all_button_icons()
+		exiting = false
 		active = false
 	end
 	SS13.register_signal(jumpIntoFloorboards, "action_trigger", function()
@@ -448,9 +467,20 @@ local function setupAntag(mind)
 						end
 					end)
 					SS13.register_signal(player, "mob_statchange", function(_, new_stat)
-						if new_stat ~= 0 then
-							exitFloorboards(turf, true)
+						if new_stat == 0 then
+							return
 						end
+						SS13.unregister_signal(player, "mob_statchange")
+						SS13.set_timeout(0, function()
+							local exitTurf = turf
+							if jaunter ~= nil and SS13.is_valid(jaunter) then
+								local jaunterTurf = dm.global_procs._get_step(jaunter, 0)
+								if SS13.istype(jaunterTurf, "/turf") then
+									exitTurf = jaunterTurf
+								end
+							end
+							exitFloorboards(exitTurf, true)
+						end)
 					end)
 					jumpIntoFloorboards.name = "Jump out of the floorboards"
 					jumpIntoFloorboards.button_icon_state = "origami_off"
@@ -461,12 +491,16 @@ local function setupAntag(mind)
 						item.invisibility = lastInvis
 					end
 				end
-				player.layer = 4
-				player.plane = getPlane(-4, turf)
-				player.pixel_z = player.base_pixel_z
-				player.anchored = false
-				dm.global_procs._remove_trait(player, "block_transformations", "clown_antag")
-				player.density = true
+				-- the clown can be gibbed or crit out during the wind-up above; touching a deleted
+				-- mob here would kill this coroutine and leave active stuck true forever
+				if SS13.is_valid(player) then
+					player.layer = 4
+					player.plane = getPlane(-4, turf)
+					player.pixel_z = player.base_pixel_z
+					player.anchored = false
+					dm.global_procs._remove_trait(player, "block_transformations", "clown_antag")
+					player.density = true
+				end
 				if shouldPull and SS13.is_valid(pulled) then
 					pulled.layer = 4
 					pulled.plane = getPlane(-4, turf)
@@ -656,6 +690,37 @@ local function setupAntag(mind)
 		browser:set_content(data)
 		browser:open()
 	end)
+	local function smashOpen(player, target)
+		player:do_attack_animation(target, "smash")
+		player:Immobilize(20)
+		player:visible_message("<span class='danger'>"..player.name.." uses their sheer strength to smash the "..target.name.."</span>", "<span class='danger'>You use your sheer strength to smash the "..target.name..", leaving you momentarily stunned.</span>")
+		target:take_damage(50, "brute", "", false)
+		dm.global_procs.playsound(target, "sound/effects/meteorimpact.ogg", 100, true)
+	end
+	local pryingDoors = {}
+	-- try_to_crowbar() runtimes on a powered airlock when it is handed a null tool, and both it
+	-- and attack_alien() sleep on their do_after, which a signal handler is not allowed to do.
+	-- Pry the door open ourselves from a coroutine instead.
+	local function pryOpenDoor(player, target)
+		local doorRef = dm.global_procs.REF(target)
+		if pryingDoors[doorRef] then
+			return
+		end
+		pryingDoors[doorRef] = true
+		SS13.set_timeout(0, function()
+			player:visible_message("<span class='warning'>"..player.name.." digs their fingers into the "..target.name.." and begins forcing it open!</span>", "<span class='notice'>You begin forcing the "..target.name.." open...</span>")
+			dm.global_procs.playsound(target, "sound/machines/airlock/airlock_alien_prying.ogg", 100, true)
+			local pried = SS13.await(SS13.global_proc, "do_after", player, 50, target)
+			pryingDoors[doorRef] = nil
+			if pried == 0 or not SS13.is_valid(player) or not SS13.is_valid(target) then
+				return
+			end
+			if target.density ~= 1 or target.locked ~= 0 or target.welded ~= 0 then
+				return
+			end
+			SS13.await(target, "open", 2)
+		end)
+	end
 	local function registerSignals(player)
 		SS13.register_signal(player, "atom_examine", function(_, observing, examineList)
 			if SS13.istype(observing, "/mob/dead") then
@@ -671,29 +736,25 @@ local function setupAntag(mind)
 			end
 		end)
 		SS13.register_signal(player, "human_pre_attack_hand", function(_, target)
-			local locked = SS13.istype(target, "/obj/machinery/door") and (target.locked ~= 0 or target.welded ~= 0)
-			if SS13.istype(target, "/obj/machinery/door") and (target:allowed(player) == 0 or locked) and target.density == 1 then
+			if SS13.istype(target, "/obj/machinery/door") and target.density == 1 then
+				local locked = target.locked ~= 0 or target.welded ~= 0
+				if not locked and target:allowed(player) ~= 0 then
+					return
+				end
 				if locked then
 					if antagData.stats.Traversing >= 2 and player.combat_mode == 1 then
-						player:do_attack_animation(target, "smash")
-						player:Immobilize(20)
-						player:visible_message("<span class='danger'>"..player.name.." uses their sheer strength to smash the "..target.name.."</span>", "<span class='danger'>You use your sheer strength to smash the "..target.name..", leaving you momentarily stunned.</span>")
-						target:take_damage(50, "brute", "", false)
-						dm.global_procs.playsound(target, "sound/effects/meteorimpact.ogg", 100, true)
+						smashOpen(player, target)
 					else
 						return
 					end
 				else
-					target:attack_alien(player)
+					pryOpenDoor(player, target)
 				end
 				return 1
 			elseif SS13.istype(target, "/obj/structure/door_assembly") then
 				if antagData.stats.Traversing >= 2 and player.combat_mode == 1 then
-					player:do_attack_animation(target, "smash")
-					player:Immobilize(20)
-					player:visible_message("<span class='danger'>"..player.name.." uses their sheer strength to smash the "..target.name.."</span>", "<span class='danger'>You use your sheer strength to smash the "..target.name..", leaving you momentarily stunned.</span>")
-					target:take_damage(50, "brute", "", false)
-					dm.global_procs.playsound(target, "sound/effects/meteorimpact.ogg", 100, true)
+					smashOpen(player, target)
+					return 1
 				end
 			end
 		end)
@@ -837,7 +898,7 @@ local function createPlayer()
 	local knife = SS13.new("/obj/item/knife")
 	player:equip_to_slot_or_del(knife, 8192, true)
 	local stone = SS13.new("/obj/item/sharpener/cult")
-	player:equip_to_slot_or_del(stone, 16384, true)
+	player:equip_conspicuous_item(stone, true)
 	local shirt = player.w_uniform
 	shirt.has_sensor = 0
 	shirt.sensor_mode = 0
