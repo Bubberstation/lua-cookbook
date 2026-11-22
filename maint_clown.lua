@@ -1,6 +1,8 @@
 local SS13 = require("SS13")
 
-SS13.wait(1)
+SS13.new = function(typepath, ...)
+	return dm.global_procs._new(typepath, { ... })
+end
 
 local ADMIN_MODE = false
 local STARTING_ABILITY_POINTS = 5
@@ -36,23 +38,37 @@ function getPlane(new_plane, z_reference)
 end
 local function setupAntag(mind)
 	local damageTypes = {
-		"bleed_mod",
-		"brain_mod",
-		"burn_mod",
-		"brute_mod",
-		"cold_mod",
-		"heat_mod",
-		"hunger_mod",
-		"oxy_mod",
-		"pressure_mod",
-		"stamina_mod",
-		"siemens_coeff",
-		"tox_mod",
+		"bleed",
+		"brain",
+		"burn",
+		"brute",
+		"cold",
+		"heat",
+		"hunger",
+		"oxygen",
+		"pressure",
+		"stamina",
+		"elec_conductivity",
+		"toxin",
 	}
+	-- percent of damage the Body stat currently takes off
+	local bodyReduction = 0
 	function reducePhysDamage(player, amount)
+		-- everything else scales these multiplicatively and undoes itself by dividing, so apply
+		-- ours as a ratio too: the Body total stays the flat percentage the help text promises
+		local factor = (100 - bodyReduction - amount) / (100 - bodyReduction)
+		bodyReduction = bodyReduction + amount
 		local phys = player.physiology
+		if phys == nil then
+			local fresh = {}
+			for _, damageType in damageTypes do
+				fresh[damageType] = factor
+			end
+			player.physiology = fresh
+			return
+		end
 		for _, damageType in damageTypes do
-			phys[damageType] = phys[damageType] - 0.01 * amount
+			phys[damageType] = (phys[damageType] or 1) * factor
 		end
 	end
 	local antagData = {
@@ -843,8 +859,13 @@ local function setupAntag(mind)
 					player.next_move = newSpeed
 				end)
 			end
-			local paramList = dm.global_procs._params2list(params)
-			if damageBuff > 0 and not isAttacking and paramList["right"] ~= "1" then
+			local isRightClick = false
+			if type(params) == "string" then
+				isRightClick = dm.global_procs._params2list(params)["right"] ~= nil
+			elseif params ~= nil then
+				isRightClick = params["right"] ~= nil
+			end
+			if damageBuff > 0 and not isAttacking and not isRightClick then
 				isAttacking = true
 				local originalForce = attackingItem.force
 				attackingItem.force = originalForce + damageBuff
@@ -853,7 +874,7 @@ local function setupAntag(mind)
 					isAttacking = false
 				end)
 			end
-			if not isAttacking and paramList["right"] == "1" then
+			if not isAttacking and isRightClick then
 				isAttacking = true
 				local originalForce = attackingItem.force
 				attackingItem.force = originalForce * 0.25
